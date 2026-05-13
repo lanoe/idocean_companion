@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <button id="startButton" class="control-button start-button">Start</button>
+    <button id="stopButton" class="control-button stop-button" disabled>Stop</button>
+    <div id="console"></div>
+{% endblock %}
+
+{% block script %}
+    <script>
+        let scriptRunning = false;
+
+        // Fonction pour charger le statut et la console depuis le serveur et localStorage
+        async function loadInitialState() {
+            // Récupérer le statut du script depuis le serveur
+            const statusResponse = await fetch('/get_script_status');
+            const statusResult = await statusResponse.json();
+            scriptRunning = statusResult.running;
+
+            // Mettre à jour les boutons en fonction du statut
+            document.getElementById('startButton').disabled = scriptRunning;
+            document.getElementById('stopButton').disabled = !scriptRunning;
+
+            // Récupérer le contenu de la console depuis localStorage
+            const savedConsoleContent = localStorage.getItem('consoleContent');
+            if (savedConsoleContent) {
+                document.getElementById('console').innerHTML = savedConsoleContent;
+            }
+
+            // Rafraîchir la console avec les dernières données du serveur
+            await getScriptOutput();
+        }
+
+        // Fonction pour démarrer le script
+        async function startScript() {
+            const consoleElement = document.getElementById('console');
+            consoleElement.innerHTML = '';  // Efface le contenu de la console
+
+            const response = await fetch('/start_tracking', { method: 'POST' });
+            const result = await response.json();
+            if (result.status === "started") {
+                scriptRunning = true;
+                document.getElementById('startButton').disabled = true;
+                document.getElementById('stopButton').disabled = false;
+                console.log("Script démarré");
+            }
+        }
+
+        // Fonction pour arrêter le script
+        async function stopScript() {
+            const response = await fetch('/stop_tracking', { method: 'POST' });
+            const result = await response.json();
+            if (result.status === "stopped") {
+                scriptRunning = false;
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('stopButton').disabled = true;
+                console.log("Script arrêté");
+            }
+        }
+
+        // Fonction pour récupérer la sortie du script
+        async function getScriptOutput() {
+            const response = await fetch('/get_script_output');
+            const result = await response.json();
+            const consoleElement = document.getElementById('console');
+            result.output.forEach(line => {
+                consoleElement.innerHTML += line + '<br>';
+            });
+
+            // Sauvegarder le contenu de la console dans localStorage
+            localStorage.setItem('consoleContent', consoleElement.innerHTML);
+
+            consoleElement.scrollTop = consoleElement.scrollHeight;
+        }
+
+        // Charger l'état initial au démarrage de la page
+        document.addEventListener('DOMContentLoaded', loadInitialState);
+
+        // Configuration des boutons
+        document.getElementById('startButton').addEventListener('click', startScript);
+        document.getElementById('stopButton').addEventListener('click', stopScript);
+
+        // Mise à jour périodique de la console
+        setInterval(getScriptOutput, 500);
+    </script>
+{% endblock %}

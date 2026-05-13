@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <form method="POST">
+        {% for field in form_fields %}
+            {% if field.name.count('[') > 0 %}
+                {% set device = field.name.split('[')[0] %}
+                {% if loop.first or form_fields[loop.index-2].name.split('[')[0] != device %}
+                    <div class="device">
+                        <h2>{{ device }}</h2>
+                {% endif %}
+            {% else %}
+                <div class="device">
+                    <h2>{{ field.name }}</h2>
+            {% endif %}
+
+            <div class="form-group">
+                <!-- <label for="{{ field.name }}">{{ field.label }}:</label> -->
+
+                {% if field.name.endswith('[IP]') %}
+                    <div class="ip-group">
+                        <input
+                            type="text"
+                            name="{{ field.name }}"
+                            id="{{ field.name }}"
+                            value="{{ field.value }}"
+                            placeholder="IP personnalisée"
+                            style="margin-left: 10px;"
+                        >
+                        <select id="{{ field.name }}_select">
+                            <option value="127.0.0.1:6040" {% if field.value == '127.0.0.1:6040' %}selected{% endif %}>127.0.0.1:6040</option>
+                            <option value="10.128.149.207:6040" {% if field.value == '10.128.149.207:6040' %}selected{% endif %}>10.128.149.207:6040</option>
+                            <option value="192.168.2.94" {% if field.value == '192.168.2.94' %}selected{% endif %}>192.168.2.94</option>
+                            <option value="demo.waterlinked.com" {% if field.value == 'demo.waterlinked.com' %}selected{% endif %}>demo.waterlinked.com</option>
+                            <option value="127.0.0.1:8080" {% if field.value == '127.0.0.1:8080' %}selected{% endif %}>127.0.0.1:8080</option>
+                        </select>
+                    </div>
+                    <script>
+                        document.querySelector('select[id="{{ field.name }}_select"]').addEventListener('change', function() {
+                            const customInput = document.getElementById('{{ field.name }}');
+                            if (this.value) {
+                                customInput.value = this.value;
+                            }
+                        });
+                    </script>
+                {% else %}
+                    <input
+                        type="{{ field.type }}"
+                        id="{{ field.name }}"
+                        name="{{ field.name }}"
+                        value="{{ field.value }}"
+                        {% if field.type == 'checkbox' and field.value %}checked{% endif %}
+                    >
+                {% endif %}
+            </div>
+
+            {% if field.name.count('[') > 0 and (loop.last or form_fields[loop.index].name.split('[')[0] != device) %}
+                </div>
+            {% elif field.name.count('[') == 0 %}
+                </div>
+            {% endif %}
+        {% endfor %}
+        <button type="submit">Enregistrer</button>
+    </form>
+{% endblock %}

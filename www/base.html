@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IDocean Companion</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .tabs {
+            display: flex;
+            background-color: #f1f1f1;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: none;
+            border-right: 1px solid #ccc;
+        }
+        .tab:last-child {
+            border-right: none;
+        }
+        .tab.active {
+            background-color: #007BFF;
+            color: white;
+        }
+        .tab-content {
+            padding: 20px;
+        }
+        button[type="submit"] {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+        .device {
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .device h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+            font-weight: bold;
+        }
+        input, select {
+            padding: 5px;
+            width: 200px;
+            font-size: 16px;
+        }
+        .ip-group {
+            display: flex;
+            align-items: center;
+        }
+        .ip-group select {
+            width: 200px;
+            margin-right: 10px;
+        }
+        .ip-group input[type="text"] {
+            width: 200px;
+        }
+
+        .control-button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .start-button {
+            background-color: #28a745; /* Vert */
+            color: white;
+        }
+
+        .start-button:hover {
+            background-color: #218838;
+        }
+
+        .stop-button {
+            background-color: #dc3545; /* Rouge */
+            color: white;
+        }
+
+        .stop-button:hover {
+            background-color: #c82333;
+        }
+
+        .stop-button:disabled,
+        .start-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Style Capture */
+       .controls { margin: 10px 0; }
+        #toggleButton {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+        .start { background-color: #4CAF50; color: white; }
+        .stop { background-color: #f44336; color: white; }
+        .filename { font-style: italic; color: #666; margin: 10px 0; }
+        .status { margin: 10px 0; font-weight: bold; }
+
+        /* Style de la console */
+        #console {
+            background-color: #000;
+            color: #0f0;
+            font-family: monospace;
+            padding: 10px;
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #333;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        #map { height: 600px; }
+        #gps-info {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .locator { color: blue; }
+        .master { color: red; }
+    </style>
+</head>
+<body>
+    <div class="tabs">
+        <div class="tab {% if request.endpoint == 'index' %}active{% endif %}" onclick="window.location.href='/'">Map</div>
+        <div class="tab {% if request.endpoint == 'tracking_page' %}active{% endif %}" onclick="window.location.href='/tracking'">Tracking</div>
+        <div class="tab {% if request.endpoint == 'config_page' %}active{% endif %}" onclick="window.location.href='/config'">Configuration</div>
+    </div>
+    <div class="tab-content">
+        {% block content %}{% endblock %}
+    </div>
+    {% block script %}{% endblock %}
+</body>
+</html>
