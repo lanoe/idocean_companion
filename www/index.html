@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <div class="controls">
+        <input type="text" id="filenameInput" placeholder="Nom du fichier (ex: capture_01)" value="capture">
+        <button id="toggleButton" onclick="toggleTask()">Démarrer Capture</button>
+        <a href="/data" target="_blank" class="control-button start-button">Fichiers Capture</a>
+    </div>
+    <div id="status"></div>
+    <div class="filename" id="filename"></div>
+
+    <div id="gps-info">
+        <p><span class="master"><strong>Master</strong></span> : <span id="master-gps" class="master">--, --</span></p>
+        <p><span class="locator"><strong>Locator</strong></span> : <span id="locator-gps" class="locator">--, --</span></p>
+    </div>
+
+    <div id="map"></div>
+{% endblock %}
+
+{% block script %}
+    <script>
+
+        // Tableau pour stocker les positions successives
+        let positions = [];
+        // Polyline pour afficher la trace
+        let trace = null;
+
+        // Fonction pour basculer l'état de la tâche
+        function toggleTask() {
+            const button = document.getElementById('toggleButton');
+            if (!isRunning) {
+                // Réinitialiser la trace et le tableau des positions
+                positions = [];
+                if (trace) {
+                    map.removeLayer(trace);
+                    trace = null;
+                }
+                const filename = filenameInput.value.trim() || 'capture';
+                //fetch('/start?filename=' + encodeURIComponent(filename)', { method: 'POST' })
+                fetch('/start', { method: 'POST' })
+                    .then(() => {
+                        isRunning = true;
+                        button.textContent = "Arrêter Capture";
+                        button.className = "stop";
+                        document.getElementById('status').textContent = "Statut : En cours";
+                        updateFilename();
+                    });
+            } else {
+                fetch('/stop', { method: 'POST' })
+                    .then(() => {
+                        isRunning = false;
+                        button.textContent = "Démarrer Capture";
+                        button.className = "start";
+                        document.getElementById('status').textContent = "Statut : Arrêté";
+                    });
+            }
+        }
+
+        // Met à jour le nom du fichier
+        function updateFilename() {
+            fetch('/get_filename')
+                .then(response => response.text())
+                .then(filename => {
+                    document.getElementById('filename').textContent = `Fichier actuel : ${filename}`;
+                });
+        }
+
+        // Met à jour l'état initial du bouton
+        fetch('/get_status')
+            .then(response => response.json())
+            .then(status => {
+                const button = document.getElementById('toggleButton');
+                isRunning = status.running;
+                button.textContent = status.running ? "Arrêter Capture" : "Démarrer Capture";
+                button.className = status.running ? "stop" : "start";
+                document.getElementById('status').textContent = `Statut : ${status.running ? "En cours" : "Arrêté"}`;
+                updateFilename();
+            });
+
+
+        // Création d'une icône personnalisée (croix rouge)
+        var redCrossIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="red"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/></svg>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+        });
+
+        // Création d'une icône personnalisée (croix bleue)
+        var blueCrossIcon = L.icon({
+            iconUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="blue"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z"/></svg>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16]
+        });
+
+        const map = L.map('map').setView([-20.934277, 55.289199], 19);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom: 30}).addTo(map);
+
+        // Marqueur avec croix rouge (master)
+        const masterMarker = L.marker([-20.934277, 55.289199], {icon: redCrossIcon}).addTo(map);
+        // Marqueur avec croix bleue (locator)
+        const locatorMarker = L.marker([-20.934545, 55.289282], {icon: blueCrossIcon}).addTo(map);
+
+        // Fonction pour récupérer les données GPS du master
+        async function fetchMasterGPS() {
+            try {
+                const response = await fetch('/get_master');
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                const data = await response.json();
+                const lat = data.message.lat / 1e7; // MAVLink utilise des coordonnées en deg*1e7
+                const lon = data.message.lng / 1e7;
+                //console.log(data);
+                //const lat = data.lat;
+                //const lon = data.lon;
+                //console.log(lat);
+                //console.log(lon);
+                document.getElementById('master-gps').textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                if (lat != 0.0 && lon != 0.0) { 
+                    masterMarker.setLatLng([lat, lon]);
+                    map.setView([lat, lon]);
+                }
+            } catch (error) {
+                document.getElementById('master-gps').textContent = `---, ---`;
+            }
+        }
+
+        // Fonction pour récupérer les données GPS du locator
+        async function fetchLocatorGPS() {
+            try {
+                const response = await fetch('/get_locator');
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                const data = await response.json();
+                //console.log(data);
+                const lat = data.lat;
+                const lon = data.lon;
+                const x = data.x;
+                const y = data.y;
+                const z = data.z;
+                document.getElementById('locator-gps').textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}, ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}`;
+                if (lat != 0.0 && lon != 0.0) { 
+                    locatorMarker.setLatLng([lat, lon]);
+                    //map.setView([lat, lon]);
+                    
+                    // Ajouter la position actuelle au tableau
+                    positions.push([lat, lon]);
+                    // Mettre à jour la polyline
+                    if (trace) {
+                        map.removeLayer(trace);
+                    }
+                    trace = L.polyline(positions, {color: 'blue', weight: 3, opacity: 0.7}).addTo(map);
+                     
+                }
+            } catch (error) {
+                    document.getElementById('locator-gps').textContent = `---, ---`;
+            }
+        }
+
+        // Appeler les fonctions de récupération toutes les seconde
+        setInterval(fetchMasterGPS, 1000);
+        setInterval(fetchLocatorGPS, 1000);
+    </script>
+{% endblock %}
