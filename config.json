@@ -1,0 +1,11 @@
+{
+  "BlueOS MavLink": {
+    "IP": "10.128.149.207:6040"
+  },
+  "WaterLinked UGPS": {
+    "IP": "demo.waterlinked.com"
+  },
+  "QGroundControl": {
+    "IP": "127.0.0.1"
+  }
+}
